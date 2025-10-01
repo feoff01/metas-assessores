@@ -86,8 +86,13 @@ app.add_middleware(
 
 def get_conn():
     return psycopg2.connect(
-        host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
-        user=DB_USER, password=DB_PASS, sslmode=DB_SSLMODE
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS,
+        sslmode=DB_SSLMODE,
+        connect_timeout=5  # evita travar o boot se o DB não responder
     )
 
 def listar_tabelas_positivador_2025(limit: Optional[int] = None) -> List[str]:
