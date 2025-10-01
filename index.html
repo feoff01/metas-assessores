@@ -1,0 +1,68 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Se quiser testar por partes: adicione "?limit_tables=2"
+  const API_URL = "http://127.0.0.1:8000/api/ativacoes";
+
+  const assessorSel = document.getElementById('assessorSel');
+  const btnReload = document.getElementById('btnReload');
+  const tblBody = document.querySelector('#tbl tbody');
+  let rawRows = [];
+  let chart;
+
+  function yyyyMmSort(a,b){ return (a||'').localeCompare(b||''); }
+  function groupData(rows){
+    const assessores = new Set(), meses = new Set();
+    rows.forEach(r=>{ assessores.add(r.assessor); meses.add(r.mes); });
+    const mesesSorted = Array.from(meses).sort(yyyyMmSort);
+    const seriesByAssessor = {};
+    Array.from(assessores).forEach(a=>{
+      seriesByAssessor[a] = mesesSorted.map(m=>{
+        const f = rows.find(r => r.assessor===a && r.mes===m);
+        return f ? Number(f.ativacoes||0) : 0;
+      });
+    });
+    return { assessores: Array.from(assessores).sort(), meses: mesesSorted, seriesByAssessor };
+  }
+  function randomColor(i){ const base=[[54,162,235],[255,99,132],[255,159,64],[75,192,192],[153,102,255],[255,205,86],[99,255,132]]; const c=base[i%base.length]; return {bg:`rgba(${c[0]},${c[1]},${c[2]},0.45)`,border:`rgba(${c[0]},${c[1]},${c[2]},1)`}; }
+  function renderChart(rows, assessorFilter="__ALL__"){
+    const ctx = document.getElementById('chart').getContext('2d');
+    const { assessores, meses, seriesByAssessor } = groupData(rows);
+    let datasets=[];
+    if (assessorFilter==="__ALL__"){
+      assessores.forEach((a,i)=>{ const {bg,border}=randomColor(i); datasets.push({label:a,data:seriesByAssessor[a],backgroundColor:bg,borderColor:border,borderWidth:1,stack:'stack1'}); });
+    } else {
+      const {bg,border}=randomColor(0);
+      datasets.push({label:assessorFilter,data:seriesByAssessor[assessorFilter]||meses.map(()=>0),backgroundColor:bg,borderColor:border,borderWidth:1});
+    }
+    if (chart) chart.destroy();
+    chart = new Chart(ctx,{type:'bar',data:{labels:meses,datasets},options:{responsive:true,plugins:{legend:{position:'top'},title:{display:true,text: assessorFilter==="__ALL__"?'Ativações (Sim) por mês — todos os assessores':`Ativações (Sim) por mês — Assessor ${assessorFilter}`}},scales:{x:{stacked:assessorFilter==="__ALL__"},y:{beginAtZero:true,stacked:assessorFilter==="__ALL__"}}}});
+  }
+  function renderTable(rows, assessorFilter="__ALL__"){
+    const filtered=assessorFilter==="__ALL__"?rows.slice():rows.filter(r=>r.assessor===assessorFilter);
+    filtered.sort((a,b)=>{ const c=yyyyMmSort(a.mes,b.mes); return c!==0?c:(a.assessor||'').localeCompare(b.assessor||'');});
+    tblBody.innerHTML='';
+    for (const r of filtered){ const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.mes}</td><td>${r.assessor}</td><td>${r.ativacoes}</td>`; tblBody.appendChild(tr); }
+  }
+  async function load(){
+    try{
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      if (!data.ok){
+        console.error("API error payload:", data);
+        alert("Falha ao carregar dados da API: " + (data.error || "erro desconhecido"));
+        return;
+      }
+      rawRows = data.rows || [];
+      const assessores = Array.from(new Set(rawRows.map(r=>r.assessor))).sort();
+      assessorSel.innerHTML = `<option value="__ALL__">Todos</option>` + assessores.map(a=>`<option>${a}</option>`).join('');
+      renderChart(rawRows); renderTable(rawRows);
+      if ((data.skipped||[]).length){ console.warn("Tabelas ignoradas:", data.skipped); }
+    }catch(err){
+      console.error("Fetch/parse error:", err);
+      alert("Falha ao carregar dados da API. Veja o console.");
+    }
+  }
+  assessorSel.addEventListener('change', ()=>{ const v=assessorSel.value; renderChart(rawRows,v); renderTable(rawRows,v); });
+  btnReload.addEventListener('click', load);
+  load();
+</script>
