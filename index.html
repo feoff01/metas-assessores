@@ -1,68 +1,384 @@
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!DOCTYPE html>
+<html lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Positivadores 2025 • Ativações / Captação / Receita</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0c12; --card:#121424; --card2:#0e1020; --stroke:#23283b;
+    --text:#e8ebff; --muted:#9fb0d9;
+    --green:#4caf50; --green-800:#2e7d32;
+    --amber:#ffb300; --amber-900:#996f00;
+    --blue:#82aaff; --accent2:#5ad6b0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#090a12 0%,#0b0c12 60%,#0b0c12 100%);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  header{position:sticky;top:0;z-index:5;background:rgba(9,10,18,.7);backdrop-filter:blur(10px);border-bottom:1px solid #1a1f33}
+  header .bar{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:12px 20px}
+  .brand{font-weight:700;letter-spacing:.2px}
+  .wrap{max-width:1400px;margin:0 auto;padding:22px}
+  .cards{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+  .card{background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .col-4{grid-column:span 4} .col-12{grid-column:span 12}
+  @media (max-width:1100px){ .col-4{grid-column:span 12} }
+  .kpicard h3{margin:0 0 2px 0;font-size:18px}
+  .kpicard .meta{color:var(--muted);font-size:12px;margin-bottom:8px}
+  .kpicard .valor{font-size:26px;font-weight:800;margin-bottom:6px}
+  .kpicard .pct{font-weight:800;border-radius:12px;padding:2px 8px;display:inline-block}
+  .pct.green{background:#16351a;color:#9ef8a1;border:1px solid #235a2a}
+  .pct.amber{background:#3a2d00;color:#ffec99;border:1px solid #6b5200}
+  .barwrap{height:10px;background:#1b2033;border:1px solid #2b3353;border-radius:999px;overflow:hidden;margin-top:10px}
+  .bar{height:100%}
+  .bar.green{background:linear-gradient(90deg,#2e7d32,#4caf50)}
+  .bar.amber{background:linear-gradient(90deg,#996f00,#ffb300)}
+  .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:16px 0 12px}
+  .select{min-width:360px;position:relative}
+  .select input{width:100%;padding:11px 12px;border:1px solid var(--stroke);background:var(--card2);color:var(--text);border-radius:12px;outline:none}
+  .dropdown{position:absolute;top:48px;left:0;right:0;max-height:300px;overflow:auto;background:var(--card2);border:1px solid var(--stroke);border-radius:12px;display:none;z-index:10}
+  .opt{padding:9px 10px;border-bottom:1px solid #1c2140;cursor:pointer;display:flex;gap:8px;align-items:center}
+  .opt:hover{background:#171b33}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-height:64px;overflow:auto}
+  .chip{background:var(--card2);border:1px solid var(--stroke);border-radius:999px;padding:4px 10px;font-size:12px}
+  .btn{padding:10px 12px;border:1px solid var(--stroke);background:var(--card2);color:var(--text);border-radius:12px;cursor:pointer}
+  .btn:hover{filter:brightness(1.08)}
+  .chart{height:260px;border-radius:14px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.03)}
+  .card h3{font-size:16px;font-weight:700;letter-spacing:.2px;margin:0 0 6px;color:#dfe6ff}
+  #chart{display:none}
+  .tablewrap{max-height:58vh;overflow:auto;border:1px solid var(--stroke);border-radius:12px;margin-top:8px}
+  table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;margin:0}
+  thead th{position:sticky;top:0;background:#12152a;border-bottom:1px solid var(--stroke);z-index:3}
+  th,td{padding:10px;border-bottom:1px solid #20243a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  th:first-child, td:first-child{position:sticky;left:0;background:#0f1220;border-right:1px solid #1e2136;z-index:2}
+  thead th:first-child{z-index:4}
+  .muted{color:var(--muted);font-size:12px} .right{margin-left:auto} .small{font-size:12px}
+  .loading{opacity:.5;pointer-events:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">Positivadores 2025 • Ativações / Captação / Receita</div>
+    <div class="muted small">Dados do PostgreSQL (AWS) + Metas simuladas</div>
+    <div class="right"></div>
+    <a class="btn" id="btnCSV" href="#" download>Baixar CSV</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="cards">
+    <div class="card kpicard col-4" id="cardAtiv">
+      <h3>Ativação</h3>
+      <div class="meta">Meta <b id="metaAtiv">—</b></div>
+      <div class="valor" id="valAtiv">—</div>
+      <span class="pct green" id="pctAtiv">—</span>
+      <div class="barwrap"><div class="bar green" id="barAtiv" style="width:0%"></div></div>
+    </div>
+    <div class="card kpicard col-4" id="cardCapt">
+      <h3>Captação</h3>
+      <div class="meta">Meta <b id="metaCapt">—</b></div>
+      <div class="valor" id="valCapt">—</div>
+      <span class="pct amber" id="pctCapt">—</span>
+      <div class="barwrap"><div class="bar amber" id="barCapt" style="width:0%"></div></div>
+    </div>
+    <div class="card kpicard col-4" id="cardRece">
+      <h3>Receita</h3>
+      <div class="meta">Meta <b id="metaRece">—</b></div>
+      <div class="valor" id="valRece">—</div>
+      <span class="pct green" id="pctRece">—</span>
+      <div class="barwrap"><div class="bar green" id="barRece" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="card col-12" style="margin-top:16px">
+    <div class="toolbar">
+      <div class="select" id="assSel">
+        <input id="assSearch" placeholder="Filtrar assessor... (digite para buscar, clique para abrir)" autocomplete="off"/>
+        <div class="dropdown" id="assDrop"></div>
+        <div class="chips" id="chips"></div>
+      </div>
+      <button class="btn" id="btnAll">Selecionar todos</button>
+      <button class="btn" id="btnClear">Limpar</button>
+
+      <div class="right"></div>
+      <div class="toolbar" style="gap:8px;margin:0">
+        <button class="btn" id="segLine" title="Linhas">Linhas</button>
+        <button class="btn" id="segBar"  title="Barras empilhadas">Barras</button>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card col-4">
+        <h3 style="margin:0 0 6px">Ativação</h3>
+        <div id="chartAtiv" class="chart"></div>
+      </div>
+      <div class="card col-4">
+        <h3 style="margin:0 0 6px">Captação</h3>
+        <div id="chartCapt" class="chart"></div>
+      </div>
+      <div class="card col-4">
+        <h3 style="margin:0 0 6px">Receita</h3>
+        <div id="chartRece" class="chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card col-12">
+    <h3 style="margin:0 0 8px">Detalhamento (linhas da AWS)</h3>
+    <div class="muted small">Colunas: Assessor, Cliente, Ativou em M?, Evadiu em M?, Net em M, Receita no Mês, Captação Líquida em M, Mês (nome)</div>
+    <div id="tbl" class="tablewrap"></div>
+  </div>
+</div>
+
 <script>
-  // Se quiser testar por partes: adicione "?limit_tables=2"
-  const API_URL = "http://127.0.0.1:8000/api/ativacoes";
+let ALL_ASSESSORES = [];
+let SELECTED = new Set();
+let CHART_MODE = 'line';
+let DATA = null;
 
-  const assessorSel = document.getElementById('assessorSel');
-  const btnReload = document.getElementById('btnReload');
-  const tblBody = document.querySelector('#tbl tbody');
-  let rawRows = [];
-  let chart;
+const COLORWAY = ['#82aaff','#5ad6b0','#ffd166','#ef476f','#06d6a0','#f78c6b','#c792ea','#29b6f6','#ff9f1c','#8bd450','#64b5f6','#9ccc65','#ffb74d','#ba68c8'];
 
-  function yyyyMmSort(a,b){ return (a||'').localeCompare(b||''); }
-  function groupData(rows){
-    const assessores = new Set(), meses = new Set();
-    rows.forEach(r=>{ assessores.add(r.assessor); meses.add(r.mes); });
-    const mesesSorted = Array.from(meses).sort(yyyyMmSort);
-    const seriesByAssessor = {};
-    Array.from(assessores).forEach(a=>{
-      seriesByAssessor[a] = mesesSorted.map(m=>{
-        const f = rows.find(r => r.assessor===a && r.mes===m);
-        return f ? Number(f.ativacoes||0) : 0;
-      });
-    });
-    return { assessores: Array.from(assessores).sort(), meses: mesesSorted, seriesByAssessor };
+const BASE_LAYOUT = {
+  paper_bgcolor:'#121424',
+  plot_bgcolor:'#121424',
+  font:{color:'#e6e9ff', family:'Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif', size:12},
+  margin:{l:56,r:14,t:6,b:40},
+  hovermode:'x unified',
+  hoverlabel:{bgcolor:'#0e1020', bordercolor:'#2b3353', font:{size:12}},
+  legend:{orientation:'h', y:1.08, x:0, xanchor:'left', bgcolor:'rgba(14,16,32,.6)', bordercolor:'#2b3353', borderwidth:1, font:{size:11}},
+  xaxis:{title:'Mês', tickangle:0, gridcolor:'#26304b', zerolinecolor:'#2c3656', linecolor:'#2b3353', tickfont:{size:11}},
+  yaxis:{gridcolor:'#26304b', zerolinecolor:'#2c3656', linecolor:'#2b3353', tickfont:{size:11}},
+  colorway: COLORWAY
+};
+
+function el(id){ return document.getElementById(id); }
+function show(e,b){ e.style.display = b ? 'block':'none'; }
+
+async function fetchAssessores(){ const r = await fetch('/api/assessores'); return await r.json(); }
+async function fetchPayload(){
+  const list = [...SELECTED];
+  const query = list.length ? '?assessores='+encodeURIComponent(list.join(',')) : '';
+  const r = await fetch('/api/metricas'+query);
+  return await r.json();
+}
+
+function renderDropdown(filter=''){
+  const box = el('assDrop');
+  const f = filter.trim().toLowerCase();
+  const arr = f ? ALL_ASSESSORES.filter(a => a.toLowerCase().includes(f)) : ALL_ASSESSORES.slice(0,600);
+  box.innerHTML = arr.map(a => {
+    const checked = SELECTED.has(a) ? '✓' : '';
+    return `<div class="opt" data-value="${a}">
+              <div style="width:18px;text-align:center">${checked}</div>
+              <div>${a}</div>
+            </div>`;
+  }).join('') || `<div class="opt muted">Nenhum encontrado</div>`;
+  show(box, true);
+}
+function renderChips(){
+  const chips = el('chips'); const list = [...SELECTED].sort();
+  chips.innerHTML = list.slice(0,30).map(a => `<span class="chip">${a}</span>`).join('') +
+                    (list.length>30 ? `<span class="chip">+${list.length-30}</span>`:'');
+}
+
+function fmtRS(v){ return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+
+function sumSelected(metricDict){
+  const series = DATA.series.filter(a => SELECTED.size ? SELECTED.has(a) : true);
+  const meses = DATA.meses;
+  let tot = 0;
+  series.forEach(a => meses.forEach(m => { tot += (metricDict[a]?.[m] || 0); }));
+  return tot;
+}
+function metaSelected(metasDict){
+  const series = DATA.series.filter(a => SELECTED.size ? SELECTED.has(a) : true);
+  return series.reduce((s,a)=> s + (metasDict[a] || 0), 0);
+}
+function pct(a,b){ if(!b || b<=0) return 0; return Math.max(0, Math.min(100, (a/b)*100)); }
+
+function updateMainCards(){
+  const ativ = sumSelected(DATA.ativacoes);
+  const metaA = metaSelected(DATA.metas.ativacoes);
+  const pA = pct(ativ, metaA);
+
+  const capt = sumSelected(DATA.captacao);
+  const metaC = metaSelected(DATA.metas.captacao);
+  const pC = pct(capt, metaC);
+
+  const rece = sumSelected(DATA.receita);
+  const metaR = metaSelected(DATA.metas.receita);
+  const pR = pct(rece, metaR);
+
+  el('valAtiv').textContent = ativ.toLocaleString('pt-BR');
+  el('metaAtiv').textContent = metaA.toLocaleString('pt-BR');
+  el('pctAtiv').textContent = (pA||0).toFixed(0) + '%';
+  el('barAtiv').style.width = (pA||0).toFixed(0) + '%';
+
+  el('valCapt').textContent = fmtRS(capt);
+  el('metaCapt').textContent = fmtRS(metaC);
+  el('pctCapt').textContent = (pC||0).toFixed(0) + '%';
+  el('barCapt').style.width = (pC||0).toFixed(0) + '%';
+
+  el('valRece').textContent = fmtRS(rece);
+  el('metaRece').textContent = fmtRS(metaR);
+  el('pctRece').textContent = (pR||0).toFixed(0) + '%';
+  el('barRece').style.width = (pR||0).toFixed(0) + '%';
+}
+
+function lineStyleFor(count){ return count <= 6 ? {shape:'spline', smoothing:0.6, width:2.4} : {shape:'linear', width:2}; }
+function maybeFillFor(count){ return count <= 3 ? 'tozeroy' : 'none'; }
+
+function plotMetric(metric, series, meses, payload, targetDiv){
+  const mesesTicks = meses.map(m => ({ "2025-01":"Jan","2025-02":"Fev","2025-03":"Mar","2025-04":"Abr","2025-05":"Mai","2025-06":"Jun","2025-07":"Jul","2025-08":"Ago","2025-09":"Set","2025-10":"Out","2025-11":"Nov","2025-12":"Dez" }[m] || m));
+  const dados    = payload[metric];
+  const isAtiv   = metric === 'ativacoes';
+  const axisTitle= isAtiv ? 'Ativações (unid.)' : (metric==='captacao' ? 'Captação (R$)' : 'Receita (R$)');
+  const lconf = lineStyleFor(series.length);
+  const fill  = maybeFillFor(series.length);
+
+  let traces;
+  if(CHART_MODE === 'bar'){
+    traces = series.map(a => ({
+      x: meses, y: meses.map(m => dados[a]?.[m]||0), type: 'bar', name: a,
+      marker: { line:{width:0}, opacity:.92 },
+      hovertemplate: `<b>${a}</b><br>%{x}<br>` + (isAtiv ? 'Ativações: %{y}' : 'R$ %{y:,.2f}') + `<extra></extra>`
+    }));
+  } else {
+    traces = series.map(a => ({
+      x: meses, y: meses.map(m => dados[a]?.[m]||0),
+      type:'scatter', mode:'lines+markers', name:a, line:lconf, marker:{size:6, opacity:.95}, fill:fill,
+      hovertemplate:`<b>${a}</b><br>%{x}<br>` + (isAtiv ? 'Ativações: %{y}' : 'R$ %{y:,.2f}') + `<extra></extra>`
+    }));
   }
-  function randomColor(i){ const base=[[54,162,235],[255,99,132],[255,159,64],[75,192,192],[153,102,255],[255,205,86],[99,255,132]]; const c=base[i%base.length]; return {bg:`rgba(${c[0]},${c[1]},${c[2]},0.45)`,border:`rgba(${c[0]},${c[1]},${c[2]},1)`}; }
-  function renderChart(rows, assessorFilter="__ALL__"){
-    const ctx = document.getElementById('chart').getContext('2d');
-    const { assessores, meses, seriesByAssessor } = groupData(rows);
-    let datasets=[];
-    if (assessorFilter==="__ALL__"){
-      assessores.forEach((a,i)=>{ const {bg,border}=randomColor(i); datasets.push({label:a,data:seriesByAssessor[a],backgroundColor:bg,borderColor:border,borderWidth:1,stack:'stack1'}); });
-    } else {
-      const {bg,border}=randomColor(0);
-      datasets.push({label:assessorFilter,data:seriesByAssessor[assessorFilter]||meses.map(()=>0),backgroundColor:bg,borderColor:border,borderWidth:1});
+
+  const totalPorMes = meses.map(m => { let s=0; series.forEach(a => s += (dados[a]?.[m]||0)); return s; });
+  const layout = {
+    ...BASE_LAYOUT,
+    yaxis:{...BASE_LAYOUT.yaxis, title: axisTitle, titlefont:{size:12}},
+    xaxis:{...BASE_LAYOUT.xaxis, tickmode:'array', tickvals: meses, ticktext: mesesTicks},
+    barmode: CHART_MODE==='bar' ? 'relative' : undefined,
+    annotations: [{
+      xref:'paper', yref:'paper', x:1, y:1.18, xanchor:'right', yanchor:'top',
+      text:`Total Selecionado: <b>${
+        (isAtiv ? totalPorMes.reduce((a,b)=>a+b,0).toLocaleString('pt-BR')
+                : totalPorMes.reduce((a,b)=>a+b,0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}))
+      }</b>`, showarrow:false, font:{size:12, color:'#b9c6ff'}
+    }]
+  };
+
+  Plotly.react(targetDiv, traces, layout, {
+    displayModeBar:true, responsive:true,
+    modeBarButtonsToRemove:['lasso2d','select2d','toggleSpikelines','autoScale2d','hoverCompareCartesian'],
+    displaylogo:false, toImageButtonOptions:{format:'png', filename:`${metric}_positivadores_2025`}
+  });
+  Plotly.animate(targetDiv, {data: traces},{transition:{duration:300, easing:'cubic-in-out'}, frame:{duration:300}});
+  window.addEventListener('resize', () => Plotly.Plots.resize(targetDiv));
+}
+
+function buildDetailsTable(){
+  const target = el('tbl');
+  const rows = (DATA.detalhes || []).filter(d => SELECTED.size ? SELECTED.has(d.assessor) : true);
+
+  const colgroup = `
+    <colgroup>
+      <col style="width:220px">
+      <col style="width:260px">
+      <col><col><col><col><col>
+      <col style="width:120px">
+    </colgroup>
+  `;
+
+  let html = `
+    <table>
+      ${colgroup}
+      <thead>
+        <tr>
+          <th>Assessor</th>
+          <th>Cliente</th>
+          <th>Ativou em M?</th>
+          <th>Evadiu em M?</th>
+          <th>Net em M</th>
+          <th>Receita no Mês</th>
+          <th>Captação Líquida em M</th>
+          <th>Mês</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  for(const r of rows){
+    html += `<tr>
+      <td>${r.assessor||''}</td>
+      <td>${r.cliente||''}</td>
+      <td>${r.ativou_em_m}</td>
+      <td>${r.evadiu_em_m}</td>
+      <td>${Number(r.net_em_m||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td>${Number(r.receita_no_mes||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td>${Number(r.captacao_liquida_em_m||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td>${r.mes_nome}</td>
+    </tr>`;
+  }
+
+  html += '</tbody></table>';
+  target.innerHTML = html;
+}
+
+function mountCSVLink(){
+  const list = [...SELECTED];
+  const q = list.length ? '?assessores='+encodeURIComponent(list.join(',')) : '';
+  el('btnCSV').href = '/api/metricas_csv'+q;
+}
+
+async function refresh(){
+  document.body.classList.add('loading');
+  DATA = await fetchPayload();
+  const series = DATA.series.filter(a => SELECTED.size ? SELECTED.has(a) : true);
+  const meses = DATA.meses;
+  updateMainCards();
+  const payload = { ativacoes: DATA.ativacoes, captacao: DATA.captacao, receita: DATA.receita };
+  plotMetric('ativacoes', series, meses, payload, 'chartAtiv');
+  plotMetric('captacao',  series, meses, payload, 'chartCapt');
+  plotMetric('receita',   series, meses, payload, 'chartRece');
+  buildDetailsTable();
+  mountCSVLink();
+  document.body.classList.remove('loading');
+}
+
+(async function init(){
+  ALL_ASSESSORES = await fetchAssessores();
+  const elDrop = document.getElementById('assDrop');
+  const elSearch = document.getElementById('assSearch');
+  function renderDropdown(filter=''){
+    const f = filter.trim().toLowerCase();
+    const arr = f ? ALL_ASSESSORES.filter(a => a.toLowerCase().includes(f)) : ALL_ASSESSORES.slice(0,600);
+    elDrop.innerHTML = arr.map(a => {
+      const checked = SELECTED.has(a) ? '✓' : '';
+      return `<div class="opt" data-value="${a}">
+                <div style="width:18px;text-align:center">${checked}</div>
+                <div>${a}</div>
+              </div>`;
+    }).join('') || `<div class="opt muted">Nenhum encontrado</div>`;
+    show(elDrop, true);
+  }
+  renderDropdown(''); renderChips(); await refresh();
+
+  elSearch.addEventListener('focus', () => renderDropdown(elSearch.value));
+  elSearch.addEventListener('input', (e)=> renderDropdown(e.target.value));
+  document.addEventListener('click', (e)=>{ const sel = document.getElementById('assSel'); if(!sel.contains(e.target)) show(elDrop, false); });
+  document.getElementById('assSel').addEventListener('click', (e)=>{
+    const opt = e.target.closest('.opt');
+    if(opt && opt.dataset.value){
+      const v = opt.dataset.value;
+      if(SELECTED.has(v)) SELECTED.delete(v); else SELECTED.add(v);
+      renderDropdown(elSearch.value); renderChips(); refresh();
     }
-    if (chart) chart.destroy();
-    chart = new Chart(ctx,{type:'bar',data:{labels:meses,datasets},options:{responsive:true,plugins:{legend:{position:'top'},title:{display:true,text: assessorFilter==="__ALL__"?'Ativações (Sim) por mês — todos os assessores':`Ativações (Sim) por mês — Assessor ${assessorFilter}`}},scales:{x:{stacked:assessorFilter==="__ALL__"},y:{beginAtZero:true,stacked:assessorFilter==="__ALL__"}}}});
-  }
-  function renderTable(rows, assessorFilter="__ALL__"){
-    const filtered=assessorFilter==="__ALL__"?rows.slice():rows.filter(r=>r.assessor===assessorFilter);
-    filtered.sort((a,b)=>{ const c=yyyyMmSort(a.mes,b.mes); return c!==0?c:(a.assessor||'').localeCompare(b.assessor||'');});
-    tblBody.innerHTML='';
-    for (const r of filtered){ const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.mes}</td><td>${r.assessor}</td><td>${r.ativacoes}</td>`; tblBody.appendChild(tr); }
-  }
-  async function load(){
-    try{
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      if (!data.ok){
-        console.error("API error payload:", data);
-        alert("Falha ao carregar dados da API: " + (data.error || "erro desconhecido"));
-        return;
-      }
-      rawRows = data.rows || [];
-      const assessores = Array.from(new Set(rawRows.map(r=>r.assessor))).sort();
-      assessorSel.innerHTML = `<option value="__ALL__">Todos</option>` + assessores.map(a=>`<option>${a}</option>`).join('');
-      renderChart(rawRows); renderTable(rawRows);
-      if ((data.skipped||[]).length){ console.warn("Tabelas ignoradas:", data.skipped); }
-    }catch(err){
-      console.error("Fetch/parse error:", err);
-      alert("Falha ao carregar dados da API. Veja o console.");
-    }
-  }
-  assessorSel.addEventListener('change', ()=>{ const v=assessorSel.value; renderChart(rawRows,v); renderTable(rawRows,v); });
-  btnReload.addEventListener('click', load);
-  load();
+  });
+
+  document.getElementById('btnAll').addEventListener('click', ()=>{ ALL_ASSESSORES.forEach(a=>SELECTED.add(a)); renderDropdown(elSearch.value); renderChips(); refresh(); });
+  document.getElementById('btnClear').addEventListener('click', ()=>{ SELECTED.clear(); renderDropdown(elSearch.value); renderChips(); refresh(); });
+
+  document.getElementById('segLine').addEventListener('click', ()=>{ CHART_MODE='line'; refresh(); });
+  document.getElementById('segBar').addEventListener('click',  ()=>{ CHART_MODE='bar';  refresh(); });
+})();
 </script>
+</body></html>
